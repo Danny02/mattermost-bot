@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  bot:
+    image: mattermost-bot:0.1
+    ports:
+      - 5000:5000
+
+  mattermost:
+      image: mattermost/mattermost-preview
+      ports:
+       - 8065:8065
+      environment:
+        - MM_SERVICESETTINGS_ALLOWEDUNTRUSTEDINTERNALCONNECTIONS=bot

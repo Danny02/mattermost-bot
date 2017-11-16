@@ -25,6 +25,11 @@ lazy val api = project.settings(
   )
 )
 
+enablePlugins(JavaAppPackaging)
+maintainer in Docker := "Daniel Heinrich"
+dockerBaseImage := "openjdk:8-jre-slim"
+dockerExposedPorts += 5000
+
 lazy val bot = project.settings(
   commonSettings,
   name := "bot-server",
