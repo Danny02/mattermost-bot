@@ -1,4 +1,4 @@
-name := "mattermost-bot"
+import sbt.Keys.scalacOptions
 
 val circeVersion = "0.9.0-M2"
 val akkaHttpVersion = "10.0.10"
@@ -9,7 +9,21 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.12.4"
 )
 
-addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+lazy val api = project.settings(
+  commonSettings,
+  name := "mattermost-api-v4",
+  libraryDependencies ++= Seq(
+    "com.typesafe" % "config" % "1.3.2",
+    "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
+    "org.json4s" %% "json4s-jackson" % "3.5.3"
+  ),
+  scalacOptions := Seq(
+    "-unchecked",
+    "-deprecation",
+    "-feature"
+  )
+)
 
 lazy val bot = project.settings(
   commonSettings,
