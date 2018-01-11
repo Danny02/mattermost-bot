@@ -7,7 +7,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.{Directive1, Directives, Route}
 import akka.stream.ActorMaterializer
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
-import io.circe.Encoder
+import io.circe.{Decoder, Encoder, HCursor, Json}
 import mattermost.bot.MonixSupport._
 import monix.eval.Task
 
@@ -106,4 +106,6 @@ object Mattermost extends Directives with ErrorAccumulatingCirceSupport {
 
     ok(response)
   }
+
 }
+

@@ -1,10 +1,8 @@
 package mattermost
 
-import akka.http.scaladsl.model.{StatusCodes, Uri}
-import akka.http.scaladsl.server.{Directive1, Route}
-import io.circe.{Decoder, Encoder}
+import akka.http.scaladsl.model.Uri
 import io.circe.generic.extras.{Configuration, ConfiguredJsonCodec}
-import mattermost.bot.Mattermost.{complete, formField, formFields, get}
+import io.circe.{Decoder, Encoder}
 
 /**
   * @author Daniel Heinrich

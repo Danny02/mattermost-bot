@@ -4,18 +4,22 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.common.EntityStreamingSupport
 import akka.http.scaladsl.marshalling.Marshal
-import akka.http.scaladsl.model.{DateTime, HttpMethods, HttpRequest, Uri}
+import akka.http.scaladsl.model.Uri.Path
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.{HttpApp, Route}
-import akka.http.scaladsl.util.FastFuture.EnhancedFuture
-import akka.stream.ActorMaterializer
+import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Flow
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.ByteString
-import com.typesafe.config.ConfigFactory
 import de.heikoseeberger.akkahttpcirce.ErrorAccumulatingCirceSupport
-import io.circe.Decoder
 import io.circe.generic.auto._
+import io.circe.{Decoder, Encoder, HCursor, Json}
+import mattermost.api.client.api.UsersApi
+import mattermost.api.client.core.{ApiInvoker, ApiRequest}
 import mattermost.bot.Mattermost._
+import mattermost.bot.ApiCoder._
 import mattermost.bot.MonixSupport._
+import mattermost.bot.config.{MattermostConfig, ServerConfig}
 import monix.eval.Task
 import monix.execution.Scheduler
 import monix.reactive.Pipe
@@ -23,7 +27,20 @@ import monix.reactive.Pipe
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.Try
 
-object WebServer extends HttpApp with ErrorAccumulatingCirceSupport  {
+object WebServer extends HttpApp with ErrorAccumulatingCirceSupport {
+  val mmConfig = new MattermostConfig()
+
+  val apiInvoker = ApiInvoker(mmConfig.uri, mmConfig.accessToken)
+
+  def requestApi[A: Encoder : Decoder](r: ApiRequest[A])(route: Task[A] => Route): Route = {
+    extractActorSystem {
+      implicit as =>
+        extractMaterializer {
+          implicit m =>
+            route(Task.deferFuture(apiInvoker.request(r)))
+        }
+    }
+  }
 
   implicit val durationDecoder: Decoder[FiniteDuration] = Decoder.decodeString.emapTry { s =>
     Try {
@@ -39,6 +56,7 @@ object WebServer extends HttpApp with ErrorAccumulatingCirceSupport  {
 
   type PipeMessage = (String, Message)
   lazy val (in, out) = Pipe.publish[PipeMessage].multicast(Scheduler(systemReference.get().dispatcher))
+
   def pushOnPipe(m: PipeMessage): Task[Unit] = Task.fromFuture(in.onNext(m)).map(_ => ())
 
   val lineSeperator = Flow[ByteString].intersperse(ByteString("\n"))
@@ -48,6 +66,12 @@ object WebServer extends HttpApp with ErrorAccumulatingCirceSupport  {
     mattermostRoute {
       completeMattermost {
         SlashResponseEntity(Array.fill(4001)('a').mkString)
+      }
+    }
+  } ~ path("user" / "email" / Segment) { email =>
+    get {
+      requestApi(UsersApi.usersEmailEmailGet(email)) { res =>
+        complete(StatusCodes.OK -> res.map(_.username))
       }
     }
   } ~ path("chat" / Segment) { room =>
@@ -72,11 +96,9 @@ object WebServer extends HttpApp with ErrorAccumulatingCirceSupport  {
     }
   }
 
-
   def postToMM(msg: IncomingHookEntity)(implicit as: ActorSystem): Task[Unit] = Task.deferFutureAction {
     implicit scheduler =>
-      val mattermostConfig = ConfigFactory.load().getConfig("mattermost")
-      val hookUri = Uri(mattermostConfig.getString("incoming"))
+      val hookUri = Uri(mmConfig.uri).withPath(Path / "hooks" / mmConfig.incomingHookToken)
 
       implicit val materializer = ActorMaterializer()
 
@@ -87,10 +109,7 @@ object WebServer extends HttpApp with ErrorAccumulatingCirceSupport  {
   }
 
   def main(args: Array[String]): Unit = {
-    val httpConfig = ConfigFactory.load().getConfig("http")
-
-    val interface = httpConfig.getString("interface")
-    val port = httpConfig.getInt("port")
-    WebServer.startServer(interface, port)
+    val serverConfig = new ServerConfig()
+    WebServer.startServer(serverConfig.host, serverConfig.port)
   }
 }
