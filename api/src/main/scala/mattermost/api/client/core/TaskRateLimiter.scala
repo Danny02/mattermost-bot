@@ -1,4 +1,4 @@
-package mattermost.bot
+package mattermost.api.client.core
 
 import java.time.{Duration, Instant}
 
@@ -7,7 +7,7 @@ import monix.eval.{MVar, Task}
 import scala.concurrent.duration.{Duration => SDuration}
 
 
-case class RateLimit(limit: Int, nextEpoche: Instant) {
+case class RateLimit(limit: Int = 0, nextEpoche: Instant = Instant.MIN) {
   def use = {
     println(s"limit is now $limit, ${Instant.now()}")
     RateLimit(limit - 1, nextEpoche)
@@ -15,7 +15,7 @@ case class RateLimit(limit: Int, nextEpoche: Instant) {
 }
 
 class TaskRateLimiter private() {
-  private[this] val limit = MVar(RateLimit(0, Instant.MIN))
+  private[this] val limit = MVar(RateLimit())
 
   def greenLight[E](task: Task[(RateLimit, E)]): Task[E] = {
     limit.take.flatMap { l =>

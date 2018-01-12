@@ -6,7 +6,11 @@ val akkaHttpVersion = "10.0.10"
 lazy val commonSettings = Seq(
   organization := "de.arbeitsagentur.at",
   version := "0.1.0-SNAPSHOT",
-  scalaVersion := "2.12.4"
+  scalaVersion := "2.12.4",
+  libraryDependencies ++= Seq(
+    "io.monix" %% "monix" % "2.3.0",
+    "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+  )
 )
 
 lazy val api = project.settings(
@@ -14,7 +18,6 @@ lazy val api = project.settings(
   name := "mattermost-api-v4",
   libraryDependencies ++= Seq(
     "com.typesafe" % "config" % "1.3.2",
-    "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
     "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttpVersion,
     "org.json4s" %% "json4s-jackson" % "3.5.3"
   ),
@@ -35,8 +38,6 @@ lazy val bot = project.settings(
   name := "bot-server",
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
   libraryDependencies ++= Seq(
-    "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-    "io.monix" %% "monix" % "2.3.0",
     "io.circe" %% "circe-core" % circeVersion,
     "io.circe" %% "circe-generic" % circeVersion,
     "io.circe" %% "circe-generic-extras" % circeVersion,

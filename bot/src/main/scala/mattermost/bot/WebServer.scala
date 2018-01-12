@@ -37,7 +37,7 @@ object WebServer extends HttpApp with ErrorAccumulatingCirceSupport {
       implicit as =>
         extractMaterializer {
           implicit m =>
-            route(Task.deferFuture(apiInvoker.request(r)))
+            route(apiInvoker.request(r))
         }
     }
   }
@@ -71,7 +71,7 @@ object WebServer extends HttpApp with ErrorAccumulatingCirceSupport {
   } ~ path("user" / "email" / Segment) { email =>
     get {
       requestApi(UsersApi.usersEmailEmailGet(email)) { res =>
-        complete(StatusCodes.OK -> res.map(_.username))
+        complete(res.map(_.username))
       }
     }
   } ~ path("chat" / Segment) { room =>
